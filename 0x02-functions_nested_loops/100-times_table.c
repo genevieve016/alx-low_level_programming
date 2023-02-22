@@ -4,7 +4,7 @@
  * main - prints the n times table, starting with 0
  *
  * @n: where 0 < n <= 15
- * Return: Always 0
+ * Return: void
  */
 
 int main(void)
