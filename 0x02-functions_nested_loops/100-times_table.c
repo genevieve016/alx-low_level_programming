@@ -1,13 +1,13 @@
 #include "main.h"
 
 /**
- * print_times_table - prints the n times table, starting with 0
+ * main - prints the n times table, starting with 0
  *
  * @n: where 0 < n <= 15
  * Return: Always 0
  */
 
-int print_times_table(void)
+int main(void)
 {
 print_times_table(3);
 _putchar('\n');
