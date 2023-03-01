@@ -1,16 +1,14 @@
 #include "main.h"
 
 /**
- * add_digits - function that adds two numbers
- * @n: integer
- * Return: 0
- * AND
- * infinite_add - add 2 numbers together
- * @n1: text representation of 1st number to add
- * @n2: text representation of 2nd number to add
+ * add_digits - function that adds two digits
+ * infinite_add - function that adds two numbers
+ * @n1: second input number to add
+ * @n2: first input nuber to add
  * @r: pointer to buffer
  * @size_r: buffer size
- * Return: pointer to calling function
+ * Return: 0
+ * 	 pointer
  */
 
 void add_digits(char *n)
