@@ -2,13 +2,8 @@
 
 /**
  * add_digits - function that adds two digits
- * infinite_add - function that adds two numbers
- * @n1: second input number to add
- * @n2: first input nuber to add
- * @r: pointer to buffer
- * @size_r: buffer size
+ * @n: integer
  * Return: 0
- * 	 pointer
  */
 
 void add_digits(char *n)
@@ -30,6 +25,15 @@ void add_digits(char *n)
 		*(n + i) = temp;
 	}
 }
+
+/**
+ * infinite_add - function that add two numbers
+ * @n1: first number input to add
+ * @n2: second number input to add
+ * @r: pointer to buffer
+ * @size_r: buffer size
+ * Return: pointer
+ */
 
 char *infinite_add(char *n1, char *n2, char *r, int size_r)
 {
