@@ -5,7 +5,7 @@
  * @b: constant byte
  * @n: function will fill first n bytes
  *
- * Return: changed array with new value for n bytes
+ * Return: pointer to memory area s
  */
 char *_memset(char *s, char b, unsigned int n)
 {
