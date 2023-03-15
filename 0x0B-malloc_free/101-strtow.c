@@ -19,15 +19,16 @@ int count_word(char *s)
 	w = 0;
 
 	for (c = 0; s[c] != '\0'; c++)
-	{
 
-		if (s[c] == ' ')
+	{
+		if (isspace(s[c]))
 			flag = 0;
-			else if (flag == 0)
-				{
-					flag = 1;
-					w++;
-				}
+
+		else if (flag == 0)
+		{
+			flag = 1;
+			w++;
+		}
 	}
 
 	return (w);
@@ -59,7 +60,6 @@ char **strtow(char *str)
 	if (matrix == NULL)
 		return (NULL);
 	for (i = 0; i <= len; i++)
-
 	{
 		if (str[i] == ' ' || str[i] == '\0')
 		{
@@ -79,7 +79,9 @@ char **strtow(char *str)
 			}
 		}
 		else if (c++ == 0)
+		{
 			start = i;
+		}
 	}
 	matrix[k] = NULL;
 	return (matrix);
