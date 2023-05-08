@@ -1,145 +1,203 @@
-#define _POSIX_C_SOURCE 200809L
 #include <elf.h>
-#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
 
-/**
- * read_error - function that reads errors in file
- * @argv: argument
- * Return: void
- */
-
-void read_error(char *argv)
-{
-	dprintf(STDERR_FILENO, "Error: Can't read from file %s\n", argv);
-	exit(98);
-}
+void check_elf(unsigned char *e_ident);
+void print_info(unsigned char *e_ident);
+void print_type(unsigned int e_type, unsigned char *e_ident);
+void print_entry(unsigned long int e_entry, unsigned char *e_ident);
+void close_elf(int elf);
 
 /**
  * check_elf - checks if a file is an ELF file
- * @header: pointer to ELF header
+ * @e_ident: pointer to an array containing the ELF magic numbers
  *
  * desc: If the file is not an ELF file - exit code 98
  */
 
-void check_elf(Elf64_Ehdr *header)
+void check_elf(unsigned char *e_ident)
 {
-	int i = 0;
+        int index;
 
-	if (header->e_ident[EI_MAG0] == 0x7f &&
-	    header->e_ident[EI_MAG1] == 'E' &&
-	    header->e_ident[EI_MAG2] == 'L' &&
-	    header->e_ident[EI_MAG3] == 'F')
-	{
-		printf("ELF Header:\n");
-		printf("  Magic:  ");
+        for (index = 0; index < 4; index++)
+        {
+                if (e_ident[index] != 127 &&
+                    e_ident[index] != 'E' &&
+                    e_ident[index] != 'L' &&
+                    e_ident[index] != 'F')
+                {
+                        dprintf(STDERR_FILENO, "Error: Not an ELF file\n");
+                        exit(98);
+                }
+        }
+}
 
-		for (i = 0; i < 16; i++)
-			printf(" %02x", header->e_ident[i]);
-		printf("\n");
-	}
+/**
+ * print_info - prints the header information of an ELF file
+ * @e_ident: pointer to an array containing the ELF magic numbers
+ *
+ * desc: prints the magic number, class, data encoding, version, OS/ABI,
+ *       ABI version and type of an ELF file
+ */
+
+void print_info(unsigned char *e_ident)
+{
+        printf("ELF Header:\n");
+        print_magic(e_ident);
+        print_class(e_ident);
+        print_data(e_ident);
+        print_version(e_ident);
+        print_abi(e_ident);
+        print_osabi(e_ident);
+        printf(" Type:                               ");
+        print_type(ET_EXEC, e_ident);
+        printf(" Entry point address:                 ");
+        print_entry(0, e_ident);
+}
+
+/**
+ * print_type - prints the type of an ELF header
+ * @e_type: type of ELF
+ * @e_ident: pointer to an array containing the ELF class
+ */
+
+void print_type(unsigned int e_type, unsigned char *e_ident)
+{
+        if (e_ident[EI_DATA] == ELFDATA2MSB)
+                e_type = ((e_type >> 8) & 0xFF) | ((e_type << 8) & 0xFF00);
+
+        switch (e_type)
+        {
+        case ET_NONE:
+                printf("NONE (No file type)\n");
+                break;
+        case ET_REL:
+                printf("REL (Relocatable file)\n");
+                break;
+        case ET_EXEC:
+                printf("EXEC (Executable file)\n");
+                break;
+        case ET_DYN:
+                printf("DYN (Shared object file)\n");
+                break;
+        case ET_CORE:
+                printf("CORE (Core file)\n");
+                break;
+        default:
+                printf("<unknown: %x>\n", e_type);
+        }
+}
+
+/**
+ * print_entry - prints the entry point address of an ELF header
+ * @e_entry: entry point address
+ * @e_ident: pointer to an array containing the ELF class
+ */
+
+void print_entry(unsigned long int e_entry, unsigned char *e_ident)
+{
+	if (e_ident[EI_CLASS] == ELFCLASS32)
+		printf(" Entry point address: 0x%x\n",
+	(unsigned int)e_entry);
+	else if (e_ident[EI_CLASS] == ELFCLASS64)
+		printf(" Entry point address: 0x%lx\n", e_entry);
 	else
-	{
-		dprintf(STDERR_FILENO, "Format error, not an ELF\n");
-		exit(98);
-	}
+		printf(" Entry point address: <unknown>\n");
 }
 
 /**
- * check_class - function that checks the class of ELF format of the file
- * @header: pointer to the ELF header struct
- * Return: void
- */
-void check_class(Elf64_Ehdr *header)
+
+close_elf - closes an ELF file descriptor
+@elf: ELF file descriptor
+desc: If there's an error with closing the file, exit code 100
+*/
+void close_elf(int elf)
 {
-	if (header->e_ident[EI_CLASS] == ELFCLASS32)
-		printf("  Class:                             ELF32\n");
-	if (header->e_ident[EI_CLASS] == ELFCLASS64)
-		printf("  Class:                             ELF64\n");
-	if (header->e_ident[EI_DATA] == ELFDATA2LSB)
-		puts("  Data:                              2's complement, little endian");
-	if (header->e_ident[EI_DATA] == ELFDATA2MSB)
-		printf("  Data:                              2's complement, big endian\n");
-	if (header->e_ident[EI_VERSION] != 1)
-		printf("  Version:                           1\n");
-	if (header->e_ident[EI_VERSION] == 1)
-		printf("  Version:                           1 (current)\n");
-	if (header->e_ident[EI_OSABI] == ELFOSABI_NONE)
-		printf("  OS/ABI:                            UNIX - System V\n");
-	else if (header->e_ident[EI_OSABI] == ELFOSABI_SYSV)
-		printf("  OS/ABI:                            UNIX - System V\n");
-	if (header->e_ident[EI_OSABI] == ELFOSABI_NETBSD)
-		printf("  OS/ABI:                            UNIX - NetBSD\n");
-	if (header->e_ident[EI_OSABI] == ELFOSABI_SOLARIS)
-		printf("  OS/ABI:                            UNIX - Solaris\n");
-	if (header->e_ident[EI_OSABI] == 0x53)
-		printf("  OS/ABI:                            <unknown: 53>\n");
-	if (header->e_ident[EI_ABIVERSION] == 0)
-		printf("  ABI Version:                       0\n");
-	if (header->e_ident[EI_ABIVERSION] == 1)
-		printf("  ABI Version:                       1\n");
-}
-
-/**
- * check_type - function that checks the type of ELF file
- * @header: pointer to the ELF header struct
- * Return: void
- */
-void check_type(Elf64_Ehdr *header)
+if (close(elf) == -1)
 {
-	if (header->e_entry)
-		printf("  Entry point address:               0x%x\n", (int)header->e_entry);
-	else
-		printf("  Entry point address:               0\n");
-	if (header->e_type == ET_EXEC)
-		printf("  Type:                              EXEC (Executable file)\n");
-	if (header->e_type == ET_NONE)
-		printf("  Type:                              Unknown type\n");
+dprintf(STDERR_FILENO, "Error: Cannot close ELF file descriptor\n");
+exit(100);
 }
-
-
-/**
- * main - program that prints ELF header formated
- * @argc: number of arguments passed to the program
- * @argv: string containing of the program and the ELF file
- * Return: 0 on success
- */
+}
 
 int main(int argc, char **argv)
 {
-	int fd64, read_char = 1;
-	Elf64_Ehdr *header, size;
+int elf, count;
+unsigned char e_ident[EI_NIDENT];
+Elf32_Ehdr e_hdr32;
+Elf64_Ehdr e_hdr64;
+    if (argc != 2)
+    {
+            dprintf(STDERR_FILENO, "Usage: %s <ELF file>\n", argv[0]);
+            exit(97);
+    }
 
-	if (argc != 2)
-	{
-		printf("Usage: elf_header elf_filename\n");
-		exit(98);
-	}
+    elf = open(argv[1], O_RDONLY);
 
-	header = malloc(sizeof(size));
-	if (!header)
-		exit(98);
+    if (elf == -1)
+    {
+            dprintf(STDERR_FILENO, "Error: Cannot read file %s\n", argv[1]);
+            exit(98);
+    }
 
-	fd64 = open(argv[1], O_RDONLY);
-	if (fd64 < 0)
-		read_error(argv[1]);
+    count = read(elf, e_ident, EI_NIDENT);
 
-	read_char = read(fd64, header, sizeof(size));
-	if (read_char < 0)
-		read_error(argv[1]);
+    if (count == -1)
+    {
+            dprintf(STDERR_FILENO, "Error: Cannot read file %s\n", argv[1]);
+            exit(98);
+    }
 
-	check_elf(header);
-	check_class(header);
-	check_data_ver(header);
-	check_type(header);
-	check_entry(header);
+    check_elf(e_ident);
 
-	free(header);
-	close(fd64);
+    lseek(elf, (off_t)0, SEEK_SET);
 
-	return (0);
-}
+    count = read(elf, &e_hdr32, sizeof(e_hdr32));
+
+    if (count != sizeof(e_hdr32))
+    {
+            close_elf(elf);
+            dprintf(STDERR_FILENO, "Error: Invalid ELF header size\n");
+            exit(98);
+    }
+
+    if (e_hdr32.e_ident[EI_CLASS] == ELFCLASS32)
+    {
+            print_magic(e_hdr32.e_ident);
+            print_class(e_hdr32.e_ident);
+            print_data(e_hdr32.e_ident);
+            print_version(e_hdr32.e_ident);
+            print_osabi(e_hdr32.e_ident);
+            print_abi(e_hdr32.e_ident);
+            print_type(e_hdr32.e_type, e_hdr32.e_ident);
+            print_entry(e_hdr32.e_entry, e_hdr32.e_ident);
+    }
+    else if (e_hdr32.e_ident[EI_CLASS] == ELFCLASS64)
+    {
+            lseek(elf, (off_t)0, SEEK_SET);
+
+            count = read(elf, &e_hdr64, sizeof(e_hdr64));
+
+            if (count != sizeof(e_hdr64))
+            {
+                    close_elf(elf);
+                    dprintf(STDERR_FILENO, "Error: Invalid ELF header size\n");
+                    exit(98);
+            }
+
+            print_magic(e_hdr64.e_ident);
+            print_class(e_hdr64.e_ident);
+            print_data(e_hdr64.e_ident);
+            print_version(e_hdr64.e_ident);
+            print_osabi(e_hdr64.e_ident);
+            print_abi(e_hdr64.e_ident);
+            print_type(e_hdr64.e_type, e_hdr64.e_ident);
+            print_entry(e_hdr64.e_entry, e_hdr64.e_ident);
+    }
+        free(header);
+        close_elf(o);
+        return (0);
